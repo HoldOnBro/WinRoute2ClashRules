@@ -97,9 +97,36 @@ IPv4 路由表
   }
 
   function isReservedIPv4(ip) {
-    const firstOctet = Number.parseInt(ip.split(".")[0]);
-    if ([10, 127].includes(firstOctet)) return true;
-    if (firstOctet === 192 && ip.split(".")[1] === '168') return true;
+    const reservedRanges = [
+      { range: '0.0.0.0/8' },
+      { range: '10.0.0.0/8' },
+      { range: '100.64.0.0/10' },
+      { range: '127.0.0.0/8' },
+      { range: '169.254.0.0/16' },
+      { range: '192.0.0.0/24' },
+      { range: '192.0.2.0/24' },
+      { range: '192.88.99.0/24' },
+      { range: '192.168.0.0/16' },
+      { range: '198.18.0.0/15' },
+      { range: '198.51.100.0/24' },
+      { range: '203.0.113.0/24' },
+      { range: '224.0.0.0/4' },
+      { range: '233.252.0.0/24' },
+      { range: '240.0.0.0/4' }
+    ];
+
+    const ipParts = ip.split('.');
+    const ipAddress = (ipParts[0] << 24) + (ipParts[1] << 16) + (ipParts[2] << 8) + parseInt(ipParts[3]);
+
+    for (let i = 0; i < reservedRanges.length; i++) {
+      const rangeParts = reservedRanges[i].range.split('/');
+      const rangeAddress = (rangeParts[0].split('.')[0] << 24) + (rangeParts[0].split('.')[1] << 16) + (rangeParts[0].split('.')[2] << 8) + parseInt(rangeParts[0].split('.')[3]);
+      const rangeMask = 0xffffffff << (32 - parseInt(rangeParts[1]));
+      if ((ipAddress & rangeMask) === (rangeAddress & rangeMask)) {
+        return true;
+      }
+    }
+
     return false;
   }
 
