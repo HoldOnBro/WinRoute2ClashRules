@@ -6,6 +6,7 @@
     .copy-btn {
       margin-left: auto;
       margin-bottom: 10px;
+      display: none;
     }
     .download-btn {
       margin-left: auto;
@@ -33,17 +34,19 @@
     <textarea id="input" class="form-control" rows="15"></textarea>
   </div>
   <div class="form-group text-center mt-4">
-    <button onclick="convert()" class="btn btn-primary">转换为 Clash 规则</button>
+    <button onclick="convertToClash()" class="btn btn-primary">转换为 Clash 规则</button>
+    <button onclick="convertToSSTap()" class="btn btn-primary">转换为 SSTap 规则</button>
+    <button onclick="convertToNetch()" class="btn btn-primary">转换为 Netch 规则</button>
   </div>
   <div class="form-group mt-4">
     <div class="row">
       <div class="col-6 output-label">
-        <label for="output">Clash 规则如下：</label>
+        <label for="output">转换得到规则如下：</label>
       </div>
       <div class="col-6">
         <div class="button-group">
-          <button onclick="copyToClipboard()" class="btn btn-secondary copy-btn">复制</button>
-          <button onclick="showDownloadDialog()" class="btn btn-success download-btn">下载</button>
+          <button onclick="copyToClipboard()" id="copyButton" class="btn btn-secondary copy-btn">复制</button>
+          <button onclick="showDownloadDialog()" id="downloadButton" class="btn btn-success download-btn" style="display: none;">下载</button>
         </div>
       </div>
     </div>
@@ -74,16 +77,16 @@ IPv4 路由表
     inputElement.placeholder = defaultText;
   });
 
-function convertToCIDR(ip, netmask) {
+  function convertToCIDR(ip, netmask) {
     let binaryStr = '';
     for (let octet of netmask.split('.')) {
         binaryStr += Number.parseInt(octet).toString(2).padStart(8, '0');
     }
     const netmaskCidr = binaryStr.split('1').length - 1;
     return ip + '/' + netmaskCidr;
-}
+  }
 
-function isValidIPv4(ip) {
+  function isValidIPv4(ip) {
     const octets = ip.split(".");
     if (octets.length !== 4) return false;
     for (let octet of octets) {
@@ -91,22 +94,24 @@ function isValidIPv4(ip) {
         if (Number.isNaN(num) || num < 0 || num > 255) return false;
     }
     return true;
-}
+  }
 
-function isReservedIPv4(ip) {
+  function isReservedIPv4(ip) {
     const firstOctet = Number.parseInt(ip.split(".")[0]);
     if ([10, 127].includes(firstOctet)) return true;
     if (firstOctet === 192 && ip.split(".")[1] === '168') return true;
     return false;
-}
+  }
 
-function hasChinese(str) {
+  function hasChinese(str) {
     return /[\u4E00-\u9FA5]/.test(str);
-}
+  }
 
-function convert() {
+  function convertToClash() {
     const inputElement = document.getElementById("input");
     const outputElement = document.getElementById("output");
+    const copyButton = document.getElementById("copyButton");
+    const downloadButton = document.getElementById("downloadButton");
 
     let routes = inputElement.value.split("\n");
     let results = ["payload:"];
@@ -125,37 +130,96 @@ function convert() {
     }
 
     outputElement.value = results.join("\n");
-}
+    copyButton.style.display = "block";
+    downloadButton.style.display = "block";
+    downloadButton.dataset.fileExtension = "rules";
+  }
 
-function copyToClipboard() {
+  function convertToSSTap() {
+    const inputElement = document.getElementById("input");
+    const outputElement = document.getElementById("output");
+    const copyButton = document.getElementById("copyButton");
+    const downloadButton = document.getElementById("downloadButton");
+
+    let routes = inputElement.value.split("\n");
+    let results = [];
+    for (let route of routes) {
+        // Split elements by spaces but ignore multiple spaces
+        let elements = route.trim().split(/\s+/);
+        if (elements.length === 5 
+            && !hasChinese(route)
+            && isValidIPv4(elements[0])
+            && isValidIPv4(elements[2])
+            && !isReservedIPv4(elements[0])
+            && !isReservedIPv4(elements[2])) {
+            const ipCidr = convertToCIDR(elements[0], elements[1]);
+            results.push(ipCidr);
+        }
+    }
+
+    outputElement.value = results.join("\n");
+    copyButton.style.display = "block";
+    downloadButton.style.display = "block";
+    downloadButton.dataset.fileExtension = "rules";
+  }
+
+  function convertToNetch() {
+    const inputElement = document.getElementById("input");
+    const outputElement = document.getElementById("output");
+    const copyButton = document.getElementById("copyButton");
+    const downloadButton = document.getElementById("downloadButton");
+
+    let routes = inputElement.value.split("\n");
+    let results = [];
+    for (let route of routes) {
+        // Split elements by spaces but ignore multiple spaces
+        let elements = route.trim().split(/\s+/);
+        if (elements.length === 5 
+            && !hasChinese(route)
+            && isValidIPv4(elements[0])
+            && isValidIPv4(elements[2])
+            && !isReservedIPv4(elements[0])
+            && !isReservedIPv4(elements[2])) {
+            const ipCidr = convertToCIDR(elements[0], elements[1]);
+            results.push(ipCidr);
+        }
+    }
+
+    outputElement.value = results.join("\n");
+    copyButton.style.display = "block";
+    downloadButton.style.display = "block";
+    downloadButton.dataset.fileExtension = "txt";
+  }
+
+  function copyToClipboard() {
     const outputElement = document.getElementById("output");
     outputElement.select();
     document.execCommand("copy");
-}
-
-function showDownloadDialog() {
-  const gameName = prompt("请输入游戏名称：");
-  if (gameName !== null && gameName.trim() !== "") {
-    const filename = gameName.trim() + ".rules";
-    downloadFile(filename);
   }
-}
 
-function downloadFile(filename) {
-  const outputElement = document.getElementById("output");
-  const text = outputElement.value;
+  function showDownloadDialog() {
+    const gameName = prompt("请输入游戏名称：");
+    if (gameName !== null && gameName.trim() !== "") {
+      const filename = gameName.trim() + "." + document.getElementById("downloadButton").dataset.fileExtension;
+      downloadFile(filename);
+    }
+  }
 
-  const element = document.createElement("a");
-  element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(text));
-  element.setAttribute("download", filename);
+  function downloadFile(filename) {
+    const outputElement = document.getElementById("output");
+    const text = outputElement.value;
 
-  element.style.display = "none";
-  document.body.appendChild(element);
+    const element = document.createElement("a");
+    element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(text));
+    element.setAttribute("download", filename);
 
-  element.click();
+    element.style.display = "none";
+    document.body.appendChild(element);
 
-  document.body.removeChild(element);
-}
+    element.click();
+
+    document.body.removeChild(element);
+  }
 </script>
 
 </body>
