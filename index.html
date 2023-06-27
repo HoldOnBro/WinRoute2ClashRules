@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
   <style>
@@ -8,57 +9,82 @@
       margin-bottom: 10px;
       display: none;
     }
+
     .download-btn {
       margin-left: auto;
       margin-bottom: 10px;
     }
+
     .output-label {
       display: flex;
       align-items: center;
     }
+
     .button-group {
       display: flex;
       justify-content: flex-end;
       margin-top: 10px;
     }
+
     .button-group button {
       margin-left: 5px;
     }
   </style>
 </head>
+
 <body>
-<div class="container mt-5">
-  <h2 class="text-center">Route to CIDR Converter</h2>
-  <div class="form-group mt-4">
-    <label for="input">粘贴路由表至此：</label>
-    <textarea id="input" class="form-control" rows="15"></textarea>
-  </div>
-  <div class="form-group text-center mt-4">
-    <button onclick="convertToClash()" class="btn btn-primary">转换为 Clash 规则</button>
-    <button onclick="convertToSSTap()" class="btn btn-primary">转换为 SSTap 规则</button>
-    <button onclick="convertToNetch()" class="btn btn-primary">转换为 Netch 规则</button>
-  </div>
-  <div class="form-group mt-4">
-    <div class="row">
-      <div class="col-6 output-label">
-        <label for="output">转换得到规则如下：</label>
-      </div>
-      <div class="col-6">
-        <div class="button-group">
-          <button onclick="copyToClipboard()" id="copyButton" class="btn btn-secondary copy-btn">复制</button>
-          <button onclick="showDownloadDialog()" id="downloadButton" class="btn btn-success download-btn" style="display: none;">下载</button>
+  <div class="container mt-5">
+    <h2 class="text-center">Route to CIDR Converter</h2>
+    <div class="form-group mt-4">
+      <label for="gameName">输入游戏名称（英文名,中文名）：</label>
+      <input type="text" id="gameName" class="form-control" placeholder="somegame,某游戏"
+        oninput="validateGameName(); updateSSTapRule();" />
+    </div>
+    <div class="form-group mt-4">
+      <label for="input">粘贴路由表至此：</label>
+      <textarea id="input" class="form-control" rows="15"></textarea>
+    </div>
+    <div class="form-group text-center mt-4">
+      <button onclick="convertToClash()" class="btn btn-primary">转换为 Clash 规则</button>
+      <button onclick="convertToSSTap()" class="btn btn-primary">转换为 SSTap 规则</button>
+      <button onclick="convertToNetch()" class="btn btn-primary">转换为 Netch 规则</button>
+    </div>
+    <div id="sstapRuleContainer" class="form-group mt-4" style="display: none;">
+      <label for="sstapRule">SSTap 规则头：</label>
+      <input type="text" id="sstapRule" class="form-control" title="
+格式如下（分行显示为方便查看）：
+#CSGO(规则英文名),
+反恐精英:全球攻势(规则中文名),
+0(动作类型 0.代理 1.直连),
+0(和上一条相同 动作类型 0.代理 1.直连),
+1(未知),
+0(未知),
+1(是否可读写 0.可读写 1.只可读),
+0(DNS代理类型 0.自动 1.直连 2.代理),
+By-HoldOnBro(备注)" />
+    </div>
+    <div class="form-group mt-4">
+      <div class="row">
+        <div class="col-6 output-label">
+          <label for="output">转换得到规则如下：</label>
+        </div>
+        <div class="col-6">
+          <div class="button-group">
+            <button onclick="copyToClipboard()" id="copyButton" class="btn btn-secondary copy-btn">复制</button>
+            <button onclick="showDownloadDialog()" id="downloadButton" class="btn btn-success download-btn"
+              style="display: none;">下载</button>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="mt-2">
-      <textarea id="output" class="form-control" rows="15" readonly></textarea>
+      <div class="mt-2">
+        <textarea id="output" class="form-control" rows="15" readonly></textarea>
+      </div>
     </div>
   </div>
-</div>
 
 
-<script>
-  const defaultText = `以下为示例：
+  <script>
+    const defaultText = `以下为示例：
 IPv4 路由表
 ===========================================================================
 活动路由:
@@ -72,182 +98,236 @@ IPv4 路由表
       14.17.108.0    255.255.255.0      172.19.83.1    172.19.83.237    100
 ......`;
 
-  window.addEventListener('DOMContentLoaded', function() {
-    const inputElement = document.getElementById('input');
-    inputElement.placeholder = defaultText;
-  });
+    window.addEventListener('DOMContentLoaded', function () {
+      const inputElement = document.getElementById('input');
+      inputElement.placeholder = defaultText;
+      const sstapRuleElement = document.getElementById('sstapRule');
+      const gameNameElement = document.getElementById('gameName');
 
-  function convertToCIDR(ip, netmask) {
-    let binaryStr = '';
-    for (let octet of netmask.split('.')) {
+      sstapRuleElement.addEventListener('input', function () {
+        const sstapRuleParts = sstapRuleElement.value.split(",");
+        if (sstapRuleParts.length >= 2) {
+          const gameNames = sstapRuleParts[0].substring(1) + "," + sstapRuleParts[1];
+          gameNameElement.value = gameNames;
+        }
+      });
+    });
+
+    function convertToCIDR(ip, netmask) {
+      let binaryStr = '';
+      for (let octet of netmask.split('.')) {
         binaryStr += Number.parseInt(octet).toString(2).padStart(8, '0');
+      }
+      const netmaskCidr = binaryStr.split('1').length - 1;
+      return ip + '/' + netmaskCidr;
     }
-    const netmaskCidr = binaryStr.split('1').length - 1;
-    return ip + '/' + netmaskCidr;
-  }
 
-  function isValidIPv4(ip) {
-    const octets = ip.split(".");
-    if (octets.length !== 4) return false;
-    for (let octet of octets) {
+    function isValidIPv4(ip) {
+      const octets = ip.split(".");
+      if (octets.length !== 4) return false;
+      for (let octet of octets) {
         let num = Number.parseInt(octet);
         if (Number.isNaN(num) || num < 0 || num > 255) return false;
+      }
+      return true;
     }
-    return true;
-  }
 
-  function isReservedIPv4(ip) {
-    const reservedRanges = [
-      { range: '0.0.0.0/8' },
-      { range: '10.0.0.0/8' },
-      { range: '100.64.0.0/10' },
-      { range: '127.0.0.0/8' },
-      { range: '169.254.0.0/16' },
-      { range: '192.0.0.0/24' },
-      { range: '192.0.2.0/24' },
-      { range: '192.88.99.0/24' },
-      { range: '192.168.0.0/16' },
-      { range: '198.18.0.0/15' },
-      { range: '198.51.100.0/24' },
-      { range: '203.0.113.0/24' },
-      { range: '224.0.0.0/4' },
-      { range: '233.252.0.0/24' },
-      { range: '240.0.0.0/4' }
-    ];
+    function isReservedIPv4(ip) {
+      const reservedRanges = [
+        { range: '0.0.0.0/8' },
+        { range: '10.0.0.0/8' },
+        { range: '100.64.0.0/10' },
+        { range: '127.0.0.0/8' },
+        { range: '169.254.0.0/16' },
+        { range: '192.0.0.0/24' },
+        { range: '192.0.2.0/24' },
+        { range: '192.88.99.0/24' },
+        { range: '192.168.0.0/16' },
+        { range: '198.18.0.0/15' },
+        { range: '198.51.100.0/24' },
+        { range: '203.0.113.0/24' },
+        { range: '224.0.0.0/4' },
+        { range: '233.252.0.0/24' },
+        { range: '240.0.0.0/4' }
+      ];
 
-    const ipParts = ip.split('.');
-    const ipAddress = (ipParts[0] << 24) + (ipParts[1] << 16) + (ipParts[2] << 8) + parseInt(ipParts[3]);
+      const ipParts = ip.split('.');
+      const ipAddress = (ipParts[0] << 24) + (ipParts[1] << 16) + (ipParts[2] << 8) + parseInt(ipParts[3]);
 
-    for (let i = 0; i < reservedRanges.length; i++) {
-      const rangeParts = reservedRanges[i].range.split('/');
-      const rangeAddress = (rangeParts[0].split('.')[0] << 24) + (rangeParts[0].split('.')[1] << 16) + (rangeParts[0].split('.')[2] << 8) + parseInt(rangeParts[0].split('.')[3]);
-      const rangeMask = 0xffffffff << (32 - parseInt(rangeParts[1]));
-      if ((ipAddress & rangeMask) === (rangeAddress & rangeMask)) {
-        return true;
+      for (let i = 0; i < reservedRanges.length; i++) {
+        const rangeParts = reservedRanges[i].range.split('/');
+        const rangeAddress = (rangeParts[0].split('.')[0] << 24) + (rangeParts[0].split('.')[1] << 16) + (rangeParts[0].split('.')[2] << 8) + parseInt(rangeParts[0].split('.')[3]);
+        const rangeMask = 0xffffffff << (32 - parseInt(rangeParts[1]));
+        if ((ipAddress & rangeMask) === (rangeAddress & rangeMask)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    function isValidSSTapRule(rule) {
+      // The expected format is a string starting with '#' followed by a series of comma-separated fields.
+      // Some fields must be specific numbers.
+      const regex = /^#([^,]+),([^,]+),(0|1),(0|1),(0|1),(0|1),(0|1),(0|1|2),([^,]+)$/;
+      return regex.test(rule);
+    }
+
+    function hasChinese(str) {
+      return /[\u4E00-\u9FA5]/.test(str);
+    }
+
+    function validateGameName() {
+      const gameNameElement = document.getElementById('gameName');
+      const gameNames = gameNameElement.value.split(',');
+      if (gameNames.length !== 2 || gameNames[0].trim() === "" || gameNames[1].trim() === "") {
+        gameNameElement.value = gameNameElement.placeholder;
       }
     }
 
-    return false;
-  }
-
-  function hasChinese(str) {
-    return /[\u4E00-\u9FA5]/.test(str);
-  }
-
-  function convertToClash() {
-    const inputElement = document.getElementById("input");
-    const outputElement = document.getElementById("output");
-    const copyButton = document.getElementById("copyButton");
-    const downloadButton = document.getElementById("downloadButton");
-
-    let routes = inputElement.value.split("\n");
-    let results = ["payload:"];
-    for (let route of routes) {
-        // Split elements by spaces but ignore multiple spaces
-        let elements = route.trim().split(/\s+/);
-        if (elements.length === 5 
-            && !hasChinese(route)
-            && isValidIPv4(elements[0])
-            && isValidIPv4(elements[2])
-            && !isReservedIPv4(elements[0])
-            && !isReservedIPv4(elements[2])) {
-            const ipCidr = convertToCIDR(elements[0], elements[1]);
-            results.push("  - " + ipCidr);
+    function updateSSTapRule() {
+      const gameNameElement = document.getElementById('gameName');
+      const sstapRuleElement = document.getElementById('sstapRule');
+      const gameNames = gameNameElement.value.split(',');
+      if (gameNames.length === 2 && gameNames[0].trim() !== "" && gameNames[1].trim() !== "") {
+        const sstapRuleParts = sstapRuleElement.value.split(",");
+        if (sstapRuleParts.length >= 9) {
+          sstapRuleParts[0] = "#" + gameNames[0].trim();
+          sstapRuleParts[1] = gameNames[1].trim();
+          sstapRuleElement.value = sstapRuleParts.join(",");
         }
+      }
     }
 
-    outputElement.value = results.join("\n");
-    copyButton.style.display = "block";
-    downloadButton.style.display = "block";
-    downloadButton.dataset.fileExtension = "rules";
-  }
 
-  function convertToSSTap() {
-    const inputElement = document.getElementById("input");
-    const outputElement = document.getElementById("output");
-    const copyButton = document.getElementById("copyButton");
-    const downloadButton = document.getElementById("downloadButton");
+    // Attach the function to the 'onchange' event of the game name input
+    document.getElementById('gameName').addEventListener('change', updateSSTapRule);
 
-    let routes = inputElement.value.split("\n");
-    let results = [];
-    for (let route of routes) {
+    function convertToClash() {
+      validateGameName()
+      const inputElement = document.getElementById("input");
+      const outputElement = document.getElementById("output");
+      const copyButton = document.getElementById("copyButton");
+      const downloadButton = document.getElementById("downloadButton");
+
+      let routes = inputElement.value.split("\n");
+      let results = ["payload:"];
+      for (let route of routes) {
         // Split elements by spaces but ignore multiple spaces
         let elements = route.trim().split(/\s+/);
-        if (elements.length === 5 
-            && !hasChinese(route)
-            && isValidIPv4(elements[0])
-            && isValidIPv4(elements[2])
-            && !isReservedIPv4(elements[0])
-            && !isReservedIPv4(elements[2])) {
-            const ipCidr = convertToCIDR(elements[0], elements[1]);
-            results.push(ipCidr);
+        if (elements.length === 5
+          && !hasChinese(route)
+          && isValidIPv4(elements[0])
+          && isValidIPv4(elements[2])
+          && !isReservedIPv4(elements[0])
+          && !isReservedIPv4(elements[2])) {
+          const ipCidr = convertToCIDR(elements[0], elements[1]);
+          results.push("  - " + ipCidr);
         }
+      }
+
+      outputElement.value = results.join("\n");
+      copyButton.style.display = "block";
+      downloadButton.style.display = "block";
+      downloadButton.dataset.fileExtension = "rules";
     }
 
-    outputElement.value = results.join("\n");
-    copyButton.style.display = "block";
-    downloadButton.style.display = "block";
-    downloadButton.dataset.fileExtension = "rules";
-  }
+    function convertToSSTap() {
+      validateGameName()
+      const inputElement = document.getElementById("input");
+      const outputElement = document.getElementById("output");
+      const gameNameElement = document.getElementById('gameName');
+      const sstapRuleContainer = document.getElementById('sstapRuleContainer');
+      const sstapRuleElement = document.getElementById('sstapRule');
+      const copyButton = document.getElementById("copyButton");
+      const downloadButton = document.getElementById("downloadButton");
 
-  function convertToNetch() {
-    const inputElement = document.getElementById("input");
-    const outputElement = document.getElementById("output");
-    const copyButton = document.getElementById("copyButton");
-    const downloadButton = document.getElementById("downloadButton");
-
-    let routes = inputElement.value.split("\n");
-    let results = [];
-    for (let route of routes) {
+      let routes = inputElement.value.split("\n");
+      let results = [];
+      for (let route of routes) {
         // Split elements by spaces but ignore multiple spaces
         let elements = route.trim().split(/\s+/);
-        if (elements.length === 5 
-            && !hasChinese(route)
-            && isValidIPv4(elements[0])
-            && isValidIPv4(elements[2])
-            && !isReservedIPv4(elements[0])
-            && !isReservedIPv4(elements[2])) {
-            const ipCidr = convertToCIDR(elements[0], elements[1]);
-            results.push(ipCidr);
+        if (elements.length === 5
+          && !hasChinese(route)
+          && isValidIPv4(elements[0])
+          && isValidIPv4(elements[2])
+          && !isReservedIPv4(elements[0])
+          && !isReservedIPv4(elements[2])) {
+          const ipCidr = convertToCIDR(elements[0], elements[1]);
+          results.push(ipCidr);
         }
+      }
+
+      sstapRuleContainer.style.display = "block";
+      const gameNames = gameNameElement.value.split(',');
+      if (isValidSSTapRule(sstapRule.value)) {
+        sstapRuleElement.value = sstapRule.value
+      }
+      else sstapRuleElement.value = "#" + gameNames[0].trim() + "," + gameNames[1].trim() + ",0,0,1,0,1,0,By-HoldOnBro";
+      outputElement.value = sstapRuleElement.value + "\n" + results.join("\n");
+      copyButton.style.display = "block";
+      downloadButton.style.display = "block";
+      downloadButton.dataset.fileExtension = "rules";
     }
 
-    outputElement.value = results.join("\n");
-    copyButton.style.display = "block";
-    downloadButton.style.display = "block";
-    downloadButton.dataset.fileExtension = "txt";
-  }
+    function convertToNetch() {
+      validateGameName()
+      const inputElement = document.getElementById("input");
+      const outputElement = document.getElementById("output");
+      const copyButton = document.getElementById("copyButton");
+      const downloadButton = document.getElementById("downloadButton");
 
-  function copyToClipboard() {
-    const outputElement = document.getElementById("output");
-    outputElement.select();
-    document.execCommand("copy");
-  }
+      let routes = inputElement.value.split("\n");
+      let results = [];
+      for (let route of routes) {
+        // Split elements by spaces but ignore multiple spaces
+        let elements = route.trim().split(/\s+/);
+        if (elements.length === 5
+          && !hasChinese(route)
+          && isValidIPv4(elements[0])
+          && isValidIPv4(elements[2])
+          && !isReservedIPv4(elements[0])
+          && !isReservedIPv4(elements[2])) {
+          const ipCidr = convertToCIDR(elements[0], elements[1]);
+          results.push(ipCidr);
+        }
+      }
+      outputElement.value = results.join("\n");
+      copyButton.style.display = "block";
+      downloadButton.style.display = "block";
+      downloadButton.dataset.fileExtension = "txt";
+    }
 
-  function showDownloadDialog() {
-    const gameName = prompt("请输入游戏名称：");
-    if (gameName !== null && gameName.trim() !== "") {
-      const filename = gameName.trim() + "." + document.getElementById("downloadButton").dataset.fileExtension;
+    function copyToClipboard() {
+      const outputElement = document.getElementById("output");
+      outputElement.select();
+      document.execCommand("copy");
+    }
+
+    function showDownloadDialog() {
+      const gameNameElement = document.getElementById('gameName');
+      const gameNames = gameNameElement.value.split(',');
+      let filename = (gameNames.length === 2 && gameNames[0].trim() !== "" && gameNames[1].trim() !== "") ? gameNames[0].trim() : "somegame";
+      filename += "." + document.getElementById("downloadButton").dataset.fileExtension;
       downloadFile(filename);
     }
-  }
 
-  function downloadFile(filename) {
-    const outputElement = document.getElementById("output");
-    const text = outputElement.value;
+    function downloadFile(filename) {
+      const outputElement = document.getElementById("output");
+      const text = outputElement.value;
+      const element = document.createElement("a");
+      element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(text));
+      element.setAttribute("download", filename);
 
-    const element = document.createElement("a");
-    element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(text));
-    element.setAttribute("download", filename);
+      element.style.display = "none";
+      document.body.appendChild(element);
 
-    element.style.display = "none";
-    document.body.appendChild(element);
+      element.click();
 
-    element.click();
-
-    document.body.removeChild(element);
-  }
-</script>
+      document.body.removeChild(element);
+    }
+  </script>
 
 </body>
+
 </html>
