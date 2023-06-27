@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <style>
+    .copy-btn {
+      margin-left: auto;
+      margin-bottom: 10px;  /* 添加的边距 */
+    }
+  </style>
+</head>
+<body>
+<div class="container mt-5">
+  <h2 class="text-center">Route to CIDR Converter</h2>
+  <div class="form-group mt-4">
+    <label for="input">Input:</label>
+    <textarea id="input" class="form-control" rows="15"></textarea>
+  </div>
+  <div class="form-group text-center mt-4">
+    <button onclick="convert()" class="btn btn-primary">转换为Clash规则</button>
+  </div>
+  <div class="form-group mt-4">
+    <div class="row">
+      <div class="col-6">
+        <label for="output">Output:</label>
+      </div>
+      <div class="col-6 text-right">
+        <button onclick="copyToClipboard()" class="btn btn-secondary copy-btn">复制到剪贴板</button>
+      </div>
+    </div>
+    <textarea id="output" class="form-control" rows="15" readonly></textarea>
+  </div>
+</div>
+
+
+<script>
+function convertToCIDR(ip, netmask) {
+    let binaryStr = '';
+    for (let octet of netmask.split('.')) {
+        binaryStr += Number.parseInt(octet).toString(2).padStart(8, '0');
+    }
+    const netmaskCidr = binaryStr.split('1').length - 1;
+    return ip + '/' + netmaskCidr;
+}
+
+function isValidIPv4(ip) {
+    const octets = ip.split(".");
+    if (octets.length !== 4) return false;
+    for (let octet of octets) {
+        let num = Number.parseInt(octet);
+        if (Number.isNaN(num) || num < 0 || num > 255) return false;
+    }
+    return true;
+}
+
+function isReservedIPv4(ip) {
+    const firstOctet = Number.parseInt(ip.split(".")[0]);
+    if ([10, 127].includes(firstOctet)) return true;
+    if (firstOctet === 192 && ip.split(".")[1] === '168') return true;
+    return false;
+}
+
+function hasChinese(str) {
+    return /[\u4E00-\u9FA5]/.test(str);
+}
+
+function convert() {
+    const inputElement = document.getElementById("input");
+    const outputElement = document.getElementById("output");
+
+    let routes = inputElement.value.split("\n");
+    let results = ["payload:"];
+    for (let route of routes) {
+        // Split elements by spaces but ignore multiple spaces
+        let elements = route.trim().split(/\s+/);
+        if (elements.length === 5 
+            && !hasChinese(route)
+            && isValidIPv4(elements[0])
+            && isValidIPv4(elements[2])
+            && !isReservedIPv4(elements[0])
+            && !isReservedIPv4(elements[2])) {
+            const ipCidr = convertToCIDR(elements[0], elements[1]);
+            results.push("  - " + ipCidr);
+        }
+    }
+
+    outputElement.value = results.join("\n");
+}
+
+function copyToClipboard() {
+    const outputElement = document.getElementById("output");
+    outputElement.select();
+    document.execCommand("copy");
+}
+</script>
+
+</body>
+</html>
