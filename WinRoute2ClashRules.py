@@ -4,12 +4,16 @@ import os
 import configparser
 import ipaddress
 
+def is_private_ipv4(ip):
+    return ipaddress.ip_address(ip).is_private
+
 def is_valid_ipv4(ip):
     try:
         ipaddress.IPv4Address(ip)
         return True
     except ipaddress.AddressValueError:
         return False
+
 
 def get_adapter_ip(adapter_keyword):
     result = subprocess.run(['ipconfig'], capture_output=True, text=True, encoding='gbk')  # 如果你的系统默认编码是utf-8，尝试更改这里
@@ -18,23 +22,26 @@ def get_adapter_ip(adapter_keyword):
     print(matches)
     return matches[0][1] if matches else None  # findall返回的是一个列表，我们取出第一个元素（也就是第一个匹配）的第二个组
 
-def get_routes(adapter_name):
+def get_routes(interface_ip):
     result = subprocess.run(['route', 'print'], capture_output=True, text=True, encoding='gbk')
     lines = result.stdout.split('\n')
     filtered_routes = []
     excluded_routes = []
 
     for line in lines:
-        stripped_line = line.lstrip()  # 移除路由表开头的空格
-        ip_candidate = stripped_line.split(" ")[0]  # 取可能为ip的部分
+        # 移除路由表开头的空格并分割
+        elements = line.lstrip().split(" ")
+        ip_candidate = elements[0]  # 取可能为ip的部分
+        access_point = elements[3] if len(elements) > 3 else ""
 
-        # 判断行是否存在“在链路上”，或者不以ip形式开头
-        if  "在链路上" in stripped_line or not is_valid_ipv4(ip_candidate):
-            excluded_routes.append(stripped_line)
-        elif adapter_name in line:
-            filtered_routes.append(stripped_line)
-    
+        # 判断行是否存在“在链路上”，或者不以ip形式开头，或者ip为私有地址，或者网关为私有地址
+        if "在链路上" in line or not is_valid_ipv4(ip_candidate) or is_private_ipv4(ip_candidate) or (access_point and is_private_ipv4(access_point) and access_point != interface_ip):
+            excluded_routes.append(line)
+        elif interface_ip in line:
+            filtered_routes.append(line)
+
     return filtered_routes, excluded_routes
+
 
 def convert_to_cidr(ip, netmask):
     # 将网络掩码转换为CIDR形式
@@ -89,6 +96,6 @@ with open(output_file_rules, 'w') as f:
         ip_cidr = convert_to_cidr(elements[0], elements[1])
         f.write('  - ' + ip_cidr + '\n')
 
-#print('Excluded routes:')
-#for route in excluded_routes:
-#    print(route)
+print('Excluded routes:')
+for route in excluded_routes:
+    print(route)
