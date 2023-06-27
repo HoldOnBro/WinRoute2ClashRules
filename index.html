@@ -5,7 +5,23 @@
   <style>
     .copy-btn {
       margin-left: auto;
-      margin-bottom: 10px;  /* 添加的边距 */
+      margin-bottom: 10px;
+    }
+    .download-btn {
+      margin-left: auto;
+      margin-bottom: 10px;
+    }
+    .output-label {
+      display: flex;
+      align-items: center;
+    }
+    .button-group {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    .button-group button {
+      margin-left: 5px;
     }
   </style>
 </head>
@@ -13,27 +29,51 @@
 <div class="container mt-5">
   <h2 class="text-center">Route to CIDR Converter</h2>
   <div class="form-group mt-4">
-    <label for="input">Input:</label>
+    <label for="input">粘贴路由表至此：</label>
     <textarea id="input" class="form-control" rows="15"></textarea>
   </div>
   <div class="form-group text-center mt-4">
-    <button onclick="convert()" class="btn btn-primary">转换为Clash规则</button>
+    <button onclick="convert()" class="btn btn-primary">转换为 Clash 规则</button>
   </div>
   <div class="form-group mt-4">
     <div class="row">
-      <div class="col-6">
-        <label for="output">Output:</label>
+      <div class="col-6 output-label">
+        <label for="output">Clash 规则如下：</label>
       </div>
-      <div class="col-6 text-right">
-        <button onclick="copyToClipboard()" class="btn btn-secondary copy-btn">复制到剪贴板</button>
+      <div class="col-6">
+        <div class="button-group">
+          <button onclick="copyToClipboard()" class="btn btn-secondary copy-btn">复制</button>
+          <button onclick="showDownloadDialog()" class="btn btn-success download-btn">下载</button>
+        </div>
       </div>
     </div>
-    <textarea id="output" class="form-control" rows="15" readonly></textarea>
+    <div class="mt-2">
+      <textarea id="output" class="form-control" rows="15" readonly></textarea>
+    </div>
   </div>
 </div>
 
 
 <script>
+  const defaultText = `以下为示例：
+IPv4 路由表
+===========================================================================
+活动路由:
+网络目标        网络掩码          网关       接口   跃点数
+          0.0.0.0          0.0.0.0    192.168.123.1   192.168.123.10     25
+       12.25.94.0    255.255.255.0      172.19.83.1    172.19.83.237    100
+       14.17.17.0    255.255.255.0      172.19.83.1    172.19.83.237    100
+       14.17.37.0    255.255.255.0      172.19.83.1    172.19.83.237    100
+       14.17.44.0    255.255.255.0      172.19.83.1    172.19.83.237    100
+       14.17.45.0    255.255.255.0      172.19.83.1    172.19.83.237    100
+      14.17.108.0    255.255.255.0      172.19.83.1    172.19.83.237    100
+......`;
+
+  window.addEventListener('DOMContentLoaded', function() {
+    const inputElement = document.getElementById('input');
+    inputElement.placeholder = defaultText;
+  });
+
 function convertToCIDR(ip, netmask) {
     let binaryStr = '';
     for (let octet of netmask.split('.')) {
@@ -91,6 +131,30 @@ function copyToClipboard() {
     const outputElement = document.getElementById("output");
     outputElement.select();
     document.execCommand("copy");
+}
+
+function showDownloadDialog() {
+  const gameName = prompt("请输入游戏名称：");
+  if (gameName !== null && gameName.trim() !== "") {
+    const filename = gameName.trim() + ".rules";
+    downloadFile(filename);
+  }
+}
+
+function downloadFile(filename) {
+  const outputElement = document.getElementById("output");
+  const text = outputElement.value;
+
+  const element = document.createElement("a");
+  element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(text));
+  element.setAttribute("download", filename);
+
+  element.style.display = "none";
+  document.body.appendChild(element);
+
+  element.click();
+
+  document.body.removeChild(element);
 }
 </script>
 
