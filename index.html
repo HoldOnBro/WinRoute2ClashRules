@@ -47,28 +47,30 @@
     <div class="form-group mt-4">
       <div class="row">
         <div class="col-md-6">
-          <label for="gameName">输入游戏名称（英文名,中文名）：</label>
-        </div>
-        <div class="col-md-6 d-flex align-items-center justify-content-between">
-          <label for="gatewayIP">虚拟网卡网关IP：</label>
-          <div class="form-check d-flex align-items-center">
-            <input class="form-check-input" type="checkbox" id="autoExtractCheckbox" checked
-              onchange="toggleAutoExtract();" />
-            <label class="form-check-label ml-2" for="autoExtractCheckbox" data-toggle="tooltip" data-placement="top"
-              title="默认选中，自动使用路由表中规则数量最多的网关IP地址">
-              自动提取
-            </label>
+          <div class="d-flex flex-column">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <label for="gameName">输入游戏名称（英文名,中文名）：</label>
+            </div>
+            <input type="text" id="gameName" class="form-control" placeholder="somegame,某游戏"
+              oninput="updateSSTapRule();" />
           </div>
         </div>
-      </div>
-      <div class="row mt-2">
         <div class="col-md-6">
-          <input type="text" id="gameName" class="form-control" placeholder="somegame,某游戏"
-            oninput="updateSSTapRule();" />
-        </div>
-        <div class="col-md-6">
-          <input type="text" id="gatewayIP" class="form-control" placeholder="172.19.83.1/在链路上"
-            onblur="validateGatewayIP();" disabled="true" />
+          <div class="d-flex flex-column">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <label for="gatewayIP">虚拟网卡网关IP：</label>
+              <div class="form-check d-flex align-items-center">
+                <input class="form-check-input" type="checkbox" id="autoExtractCheckbox" checked
+                  onchange="toggleAutoExtract();" />
+                <label class="form-check-label ml-2" for="autoExtractCheckbox" data-toggle="tooltip"
+                  data-placement="top" title="默认选中，自动使用路由表中规则数量最多的网关IP地址">
+                  自动提取
+                </label>
+              </div>
+            </div>
+            <input type="text" id="gatewayIP" class="form-control" placeholder="172.19.83.1/在链路上"
+              onblur="validateGatewayIP();" disabled="true" />
+          </div>
         </div>
       </div>
     </div>
