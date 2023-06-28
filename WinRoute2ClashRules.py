@@ -4,8 +4,10 @@ import os
 import configparser
 import ipaddress
 
-def is_private_ipv4(ip):
-    return ipaddress.ip_address(ip).is_private
+
+def is_reserved_ipv4(ip):
+    return ipaddress.ip_address(ip).is_reserved or ipaddress.ip_address(ip).is_multicast or ipaddress.ip_address(ip).is_private
+
 
 def is_valid_ipv4(ip):
     try:
@@ -16,14 +18,18 @@ def is_valid_ipv4(ip):
 
 
 def get_adapter_ip(adapter_keyword):
-    result = subprocess.run(['ipconfig'], capture_output=True, text=True, encoding='gbk')  # 如果你的系统默认编码是utf-8，尝试更改这里
+    result = subprocess.run(['ipconfig'], capture_output=True,
+                            text=True, encoding='gbk')  # 如果你的系统默认编码是utf-8，尝试更改这里
     pattern = f'{adapter_keyword}.*?IPv4.*?:\s+(.*?)\s'
     matches = re.findall(pattern, result.stdout, re.DOTALL)
-    print(matches)
-    return matches[0][1] if matches else None  # findall返回的是一个列表，我们取出第一个元素（也就是第一个匹配）的第二个组
+    print('虚拟网卡地址为：' + matches[0])
+    # findall返回的是一个列表，我们取出第一个元素（也就是第一个匹配的 ipv4 地址）
+    return matches[0] if matches else None
+
 
 def get_routes(interface_ip):
-    result = subprocess.run(['route', 'print'], capture_output=True, text=True, encoding='gbk')
+    result = subprocess.run(
+        ['route', 'print'], capture_output=True, text=True, encoding='gbk')
     lines = result.stdout.split('\n')
     filtered_routes = []
     excluded_routes = []
@@ -34,8 +40,8 @@ def get_routes(interface_ip):
         ip_candidate = elements[0]  # 取可能为ip的部分
         access_point = elements[3] if len(elements) > 3 else ""
 
-        # 判断行是否存在“在链路上”，或者不以ip形式开头，或者ip为私有地址，或者网关为私有地址
-        if "在链路上" in line or not is_valid_ipv4(ip_candidate) or is_private_ipv4(ip_candidate) or (access_point and is_private_ipv4(access_point) and access_point != interface_ip):
+        # 判断行是否不以ip形式开头，或者开头ip为保留地址，或者接口ip为保留地址
+        if not is_valid_ipv4(ip_candidate) or is_reserved_ipv4(ip_candidate) or (access_point and access_point != interface_ip):
             excluded_routes.append(line)
         elif interface_ip in line:
             filtered_routes.append(line)
@@ -51,6 +57,7 @@ def convert_to_cidr(ip, netmask):
     netmask = str(len([bit for bit in binary_str if bit == '1']))
     return ip + '/' + netmask
 
+
 script_dir = os.path.dirname(os.path.realpath(__file__))
 config_file = os.path.join(script_dir, 'interface.ini')
 config = configparser.ConfigParser()
@@ -63,7 +70,7 @@ if os.path.isfile(config_file):
     interface_ip = get_adapter_ip(adapter_name)
     if not interface_ip:
         adapter_name = ''
-        
+
 if not adapter_name:
     adapter_name = input('请输入UU加速器的虚拟网卡名称，如“以太网 3”（网卡名称可在cmd内执行ipconfig查看）： ')
     interface_ip = get_adapter_ip(adapter_name)
@@ -78,8 +85,13 @@ if not adapter_name:
         exit(1)
 
 game_rule_name = input("请输入加速游戏的名称，如“APEX”：")
-output_file_txt = os.path.join(script_dir, f'{game_rule_name}.txt')
-output_file_rules = os.path.join(script_dir, f'{game_rule_name}.rules')
+rules_dir = os.path.join(script_dir, 'rules')
+if not os.path.exists(rules_dir):
+    os.makedirs(rules_dir)
+output_file_txt = os.path.join(rules_dir, f'{game_rule_name}.txt')
+output_file_rules = os.path.join(rules_dir, f'{game_rule_name}.rules')
+output_file_sstap_rules = os.path.join(
+    rules_dir, f'{game_rule_name}-SSTap.rules')
 
 matching_routes, excluded_routes = get_routes(interface_ip)
 
@@ -95,6 +107,14 @@ with open(output_file_rules, 'w') as f:
         elements = route.split()  # 使用空格分割
         ip_cidr = convert_to_cidr(elements[0], elements[1])
         f.write('  - ' + ip_cidr + '\n')
+
+with open(output_file_sstap_rules, 'w') as f:
+    f.write('#' + game_rule_name + ',' + game_rule_name +
+            ',0,0,1,0,1,0,By-HoldOnBro\n')
+    for route in matching_routes:
+        elements = route.split()  # 使用空格分割
+        ip_cidr = convert_to_cidr(elements[0], elements[1])
+        f.write(ip_cidr + '\n')
 
 print('Excluded routes:')
 for route in excluded_routes:
