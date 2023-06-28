@@ -370,8 +370,17 @@ IPv4 路由表
       fileName += "." + downloadButton.dataset.fileExtension;
       const fileContents = outputElement.value;
       const blob = new Blob([fileContents], { type: "text/plain;charset=utf-8" });
-      saveAs(blob, fileName);
+      const downloadUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
     }
+
 
     function toggleAutoExtract() {
       const autoExtractCheckbox = document.getElementById('autoExtractCheckbox');
