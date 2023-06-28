@@ -100,6 +100,8 @@ IPv4 路由表
       14.17.108.0    255.255.255.0      172.19.83.1    172.19.83.237    100
 ......`;
 
+    let gameName = "";
+
     window.addEventListener('DOMContentLoaded', function () {
       const inputElement = document.getElementById('input');
       inputElement.placeholder = defaultText;
@@ -109,8 +111,8 @@ IPv4 路由表
       sstapRuleElement.addEventListener('input', function () {
         const sstapRuleParts = sstapRuleElement.value.split(",");
         if (sstapRuleParts.length >= 2) {
-          const gameNames = sstapRuleParts[0].substring(1) + "," + sstapRuleParts[1];
-          gameNameElement.value = gameNames;
+          gameName = sstapRuleParts[0].substring(1) + "," + sstapRuleParts[1];
+          gameNameElement.value = gameName;
         }
       });
     });
@@ -201,12 +203,8 @@ IPv4 路由表
       }
     }
 
-
-    // Attach the function to the 'onchange' event of the game name input
-    document.getElementById('gameName').addEventListener('change', updateSSTapRule);
-
     function convertToClash() {
-      validateGameName()
+      validateGameName();
       const inputElement = document.getElementById("input");
       const outputElement = document.getElementById("output");
       const copyButton = document.getElementById("copyButton");
@@ -237,7 +235,7 @@ IPv4 路由表
     }
 
     function convertToSSTap() {
-      validateGameName()
+      validateGameName();
       const inputElement = document.getElementById("input");
       const outputElement = document.getElementById("output");
       const gameNameElement = document.getElementById('gameName');
@@ -264,9 +262,10 @@ IPv4 路由表
 
       const gameNames = gameNameElement.value.split(',');
       if (isValidSSTapRule(sstapRule.value)) {
-        sstapRuleElement.value = sstapRule.value
+        sstapRuleElement.value = sstapRule.value;
+      } else {
+        sstapRuleElement.value = "#" + gameNames[0].trim() + "," + gameNames[1].trim() + ",0,0,1,0,1,0,By-HoldOnBro";
       }
-      else sstapRuleElement.value = "#" + gameNames[0].trim() + "," + gameNames[1].trim() + ",0,0,1,0,1,0,By-HoldOnBro";
       outputElement.value = sstapRuleElement.value + "\n" + results.join("\n");
       copyButton.style.display = "block";
       downloadButton.style.display = "block";
@@ -275,7 +274,7 @@ IPv4 路由表
     }
 
     function convertToNetch() {
-      validateGameName()
+      validateGameName();
       const inputElement = document.getElementById("input");
       const outputElement = document.getElementById("output");
       const copyButton = document.getElementById("copyButton");
