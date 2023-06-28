@@ -2,7 +2,8 @@
 <html>
 
 <head>
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="http://lib.sinaapp.com/js/bootstrap/4.3.1/css/bootstrap.min.css">
   <style>
     .copy-btn {
       margin-left: auto;
@@ -29,6 +30,14 @@
     .button-group button {
       margin-left: 5px;
     }
+
+    #sstapRuleContainer:not(.show) {
+      display: none;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+    }
   </style>
 </head>
 
@@ -42,42 +51,35 @@
     </div>
     <div class="form-group mt-4">
       <label for="input">粘贴路由表至此：</label>
-      <textarea id="input" class="form-control" rows="15"></textarea>
+      <textarea id="input" class="form-control" rows="10"></textarea>
     </div>
     <div class="form-group text-center mt-4">
-      <button onclick="convertToClash()" class="btn btn-primary">转换为 Clash 规则</button>
-      <button onclick="convertToSSTap()" class="btn btn-primary">转换为 SSTap 规则</button>
-      <button onclick="convertToNetch()" class="btn btn-primary">转换为 Netch 规则</button>
+      <div class="button-group d-flex justify-content-center">
+        <button onclick="convertToClash()" class="btn btn-primary">转换为 Clash 规则</button>
+        <button onclick="convertToSSTap()" class="btn btn-primary">转换为 SSTap 规则</button>
+        <button onclick="convertToNetch()" class="btn btn-primary">转换为 Netch 规则</button>
+      </div>
     </div>
-    <div id="sstapRuleContainer" class="form-group mt-4" style="display: none;">
+    <div id="sstapRuleContainer" class="form-group mt-4 collapse">
       <label for="sstapRule">SSTap 规则头：</label>
-      <input type="text" id="sstapRule" class="form-control" title="
-格式如下（分行显示为方便查看）：
-#CSGO(规则英文名),
-反恐精英:全球攻势(规则中文名),
-0(动作类型 0.代理 1.直连),
-0(和上一条相同 动作类型 0.代理 1.直连),
-1(未知),
-0(未知),
-1(是否可读写 0.可读写 1.只可读),
-0(DNS代理类型 0.自动 1.直连 2.代理),
-By-HoldOnBro(备注)" />
+      <textarea id="sstapRule" class="form-control" rows="3"
+        title="格式如下（分行显示为方便查看）：&#10;#CSGO(规则英文名),&#10;反恐精英:全球攻势(规则中文名),&#10;0(动作类型 0.代理 1.直连),&#10;0(和上一条相同 动作类型 0.代理 1.直连),&#10;1(未知),&#10;0(未知),&#10;1(是否可读写 0.可读写 1.只可读),&#10;0(DNS代理类型 0.自动 1.直连 2.代理),&#10;By-HoldOnBro(备注)"></textarea>
     </div>
     <div class="form-group mt-4">
       <div class="row">
-        <div class="col-6 output-label">
-          <label for="output">转换得到规则如下：</label>
+        <div class="col-6 output-label text-right">
+          <label for="output" class="mr-2">转换得到规则如下：</label>
         </div>
         <div class="col-6">
-          <div class="button-group">
+          <div class="button-group d-flex justify-content-end">
             <button onclick="copyToClipboard()" id="copyButton" class="btn btn-secondary copy-btn">复制</button>
             <button onclick="showDownloadDialog()" id="downloadButton" class="btn btn-success download-btn"
               style="display: none;">下载</button>
           </div>
         </div>
-      </div>
-      <div class="mt-2">
-        <textarea id="output" class="form-control" rows="15" readonly></textarea>
+        <div class="col-12">
+          <textarea id="output" class="form-control" rows="10" readonly></textarea>
+        </div>
       </div>
     </div>
   </div>
@@ -209,6 +211,7 @@ IPv4 路由表
       const outputElement = document.getElementById("output");
       const copyButton = document.getElementById("copyButton");
       const downloadButton = document.getElementById("downloadButton");
+      const sstapRuleContainer = document.getElementById('sstapRuleContainer');
 
       let routes = inputElement.value.split("\n");
       let results = ["payload:"];
@@ -230,6 +233,7 @@ IPv4 路由表
       copyButton.style.display = "block";
       downloadButton.style.display = "block";
       downloadButton.dataset.fileExtension = "rules";
+      sstapRuleContainer.classList.remove('show');
     }
 
     function convertToSSTap() {
@@ -258,7 +262,6 @@ IPv4 路由表
         }
       }
 
-      sstapRuleContainer.style.display = "block";
       const gameNames = gameNameElement.value.split(',');
       if (isValidSSTapRule(sstapRule.value)) {
         sstapRuleElement.value = sstapRule.value
@@ -268,6 +271,7 @@ IPv4 路由表
       copyButton.style.display = "block";
       downloadButton.style.display = "block";
       downloadButton.dataset.fileExtension = "rules";
+      sstapRuleContainer.classList.add('show');
     }
 
     function convertToNetch() {
@@ -276,6 +280,7 @@ IPv4 路由表
       const outputElement = document.getElementById("output");
       const copyButton = document.getElementById("copyButton");
       const downloadButton = document.getElementById("downloadButton");
+      const sstapRuleContainer = document.getElementById('sstapRuleContainer');
 
       let routes = inputElement.value.split("\n");
       let results = [];
@@ -296,6 +301,7 @@ IPv4 路由表
       copyButton.style.display = "block";
       downloadButton.style.display = "block";
       downloadButton.dataset.fileExtension = "txt";
+      sstapRuleContainer.classList.remove('show');
     }
 
     function copyToClipboard() {
