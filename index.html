@@ -45,10 +45,34 @@
   <div class="container mt-5">
     <h2 class="text-center">Route to CIDR Converter</h2>
     <div class="form-group mt-4">
-      <label for="gameName">输入游戏名称（英文名,中文名）：</label>
-      <input type="text" id="gameName" class="form-control" placeholder="somegame,某游戏"
-        oninput="updateSSTapRule();" />
+      <div class="row">
+        <div class="col-md-6">
+          <label for="gameName">输入游戏名称（英文名,中文名）：</label>
+        </div>
+        <div class="col-md-6 d-flex align-items-center justify-content-between">
+          <label for="gatewayIP">虚拟网卡网关IP：</label>
+          <div class="form-check d-flex align-items-center">
+            <input class="form-check-input" type="checkbox" id="autoExtractCheckbox" checked
+              onchange="toggleAutoExtract();" />
+            <label class="form-check-label ml-2" for="autoExtractCheckbox" data-toggle="tooltip" data-placement="top"
+              title="默认选中，自动使用路由表中规则数量最多的网关IP地址">
+              自动提取
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="row mt-2">
+        <div class="col-md-6">
+          <input type="text" id="gameName" class="form-control" placeholder="somegame,某游戏"
+            oninput="updateSSTapRule();" />
+        </div>
+        <div class="col-md-6">
+          <input type="text" id="gatewayIP" class="form-control" placeholder="172.19.83.1/在链路上"
+            onblur="validateGatewayIP();" disabled="true" />
+        </div>
+      </div>
     </div>
+
     <div class="form-group mt-4">
       <label for="input">粘贴路由表至此：</label>
       <textarea id="input" class="form-control" rows="10"></textarea>
@@ -101,12 +125,14 @@ IPv4 路由表
 ......`;
 
     let gameName = "";
+    let selectedGatewayIP = "";
 
     window.addEventListener('DOMContentLoaded', function () {
       const inputElement = document.getElementById('input');
       inputElement.placeholder = defaultText;
       const sstapRuleElement = document.getElementById('sstapRule');
       const gameNameElement = document.getElementById('gameName');
+      const gatewayIPElement = document.getElementById('gatewayIP');
 
       sstapRuleElement.addEventListener('input', function () {
         const sstapRuleParts = sstapRuleElement.value.split(",");
@@ -189,6 +215,14 @@ IPv4 路由表
       }
     }
 
+    function validateGatewayIP() {
+      const gatewayIPElement = document.getElementById('gatewayIP');
+      const gatewayIP = gatewayIPElement.value.trim();
+      if (gatewayIP !== "在链路上" && !isValidIPv4(gatewayIP)) {
+        gatewayIPElement.value = "172.19.83.1/在链路上";
+      }
+    }
+
     function updateSSTapRule() {
       const gameNameElement = document.getElementById('gameName');
       const sstapRuleElement = document.getElementById('sstapRule');
@@ -203,8 +237,35 @@ IPv4 路由表
       }
     }
 
+    function extractGatewayIP() {
+      if (document.getElementById('autoExtractCheckbox').checked) {
+        const inputElement = document.getElementById('input');
+        const gatewayIPCounts = new Map();
+        const routes = inputElement.value.split("\n");
+
+        for (let route of routes) {
+          const elements = route.trim().split(/\s+/);
+          if (elements.length >= 3 && isValidIPv4(elements[0])) {
+            const gatewayIP = elements[2];
+            gatewayIPCounts.set(gatewayIP, (gatewayIPCounts.get(gatewayIP) || 0) + 1);
+          }
+        }
+
+        if (gatewayIPCounts.size > 0) {
+          const sortedGatewayIPs = Array.from(gatewayIPCounts.keys()).sort((a, b) => gatewayIPCounts.get(b) - gatewayIPCounts.get(a));
+          selectedGatewayIP = sortedGatewayIPs[0];
+        }
+      } else {
+        const gatewayIPElement = document.getElementById('gatewayIP');
+        const gatewayIP = gatewayIPElement.value.trim();
+        selectedGatewayIP = gatewayIP;
+      }
+    }
+
     function convertToClash() {
       validateGameName();
+      extractGatewayIP();
+
       const inputElement = document.getElementById("input");
       const outputElement = document.getElementById("output");
       const copyButton = document.getElementById("copyButton");
@@ -214,14 +275,8 @@ IPv4 路由表
       let routes = inputElement.value.split("\n");
       let results = ["payload:"];
       for (let route of routes) {
-        // Split elements by spaces but ignore multiple spaces
         let elements = route.trim().split(/\s+/);
-        if (elements.length === 5
-          && !hasChinese(route)
-          && isValidIPv4(elements[0])
-          && isValidIPv4(elements[2])
-          && !isReservedIPv4(elements[0])
-          && !isReservedIPv4(elements[2])) {
+        if (elements.length >= 3 && isValidIPv4(elements[0]) && elements[2] === selectedGatewayIP) {
           const ipCidr = convertToCIDR(elements[0], elements[1]);
           results.push("  - " + ipCidr);
         }
@@ -236,7 +291,9 @@ IPv4 路由表
 
     function convertToSSTap() {
       validateGameName();
+      extractGatewayIP();
       updateSSTapRule();
+
       const inputElement = document.getElementById("input");
       const outputElement = document.getElementById("output");
       const gameNameElement = document.getElementById('gameName');
@@ -248,14 +305,8 @@ IPv4 路由表
       let routes = inputElement.value.split("\n");
       let results = [];
       for (let route of routes) {
-        // Split elements by spaces but ignore multiple spaces
         let elements = route.trim().split(/\s+/);
-        if (elements.length === 5
-          && !hasChinese(route)
-          && isValidIPv4(elements[0])
-          && isValidIPv4(elements[2])
-          && !isReservedIPv4(elements[0])
-          && !isReservedIPv4(elements[2])) {
+        if (elements.length >= 3 && isValidIPv4(elements[0]) && elements[2] === selectedGatewayIP) {
           const ipCidr = convertToCIDR(elements[0], elements[1]);
           results.push(ipCidr);
         }
@@ -276,6 +327,8 @@ IPv4 路由表
 
     function convertToNetch() {
       validateGameName();
+      extractGatewayIP();
+
       const inputElement = document.getElementById("input");
       const outputElement = document.getElementById("output");
       const copyButton = document.getElementById("copyButton");
@@ -285,18 +338,13 @@ IPv4 路由表
       let routes = inputElement.value.split("\n");
       let results = [];
       for (let route of routes) {
-        // Split elements by spaces but ignore multiple spaces
         let elements = route.trim().split(/\s+/);
-        if (elements.length === 5
-          && !hasChinese(route)
-          && isValidIPv4(elements[0])
-          && isValidIPv4(elements[2])
-          && !isReservedIPv4(elements[0])
-          && !isReservedIPv4(elements[2])) {
+        if (elements.length >= 3 && isValidIPv4(elements[0]) && elements[2] === selectedGatewayIP) {
           const ipCidr = convertToCIDR(elements[0], elements[1]);
           results.push(ipCidr);
         }
       }
+
       outputElement.value = results.join("\n");
       copyButton.style.display = "block";
       downloadButton.style.display = "block";
@@ -311,29 +359,35 @@ IPv4 路由表
     }
 
     function showDownloadDialog() {
-      const gameNameElement = document.getElementById('gameName');
-      const gameNames = gameNameElement.value.split(',');
-      let filename = (gameNames.length === 2 && gameNames[0].trim() !== "" && gameNames[1].trim() !== "") ? gameNames[0].trim() : "somegame";
-      filename += "." + document.getElementById("downloadButton").dataset.fileExtension;
-      downloadFile(filename);
-    }
-
-    function downloadFile(filename) {
       const outputElement = document.getElementById("output");
-      const text = outputElement.value;
-      const element = document.createElement("a");
-      element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(text));
-      element.setAttribute("download", filename);
-
-      element.style.display = "none";
-      document.body.appendChild(element);
-
-      element.click();
-
-      document.body.removeChild(element);
+      const downloadButton = document.getElementById("downloadButton");
+      const fileExtension = downloadButton.dataset.fileExtension;
+      const fileName = "rules." + fileExtension;
+      const fileContents = outputElement.value;
+      const blob = new Blob([fileContents], { type: "text/plain;charset=utf-8" });
+      saveAs(blob, fileName);
     }
-  </script>
 
+    function toggleAutoExtract() {
+      const autoExtractCheckbox = document.getElementById('autoExtractCheckbox');
+      const gatewayIPElement = document.getElementById('gatewayIP');
+      const gatewayIP = gatewayIPElement.value.trim();
+      if (autoExtractCheckbox.checked) {
+        gatewayIPElement.disabled = true;
+        gatewayIPElement.value = "";
+      } else {
+        gatewayIPElement.disabled = false;
+        gatewayIPElement.value = selectedGatewayIP;
+      }
+    }
+
+    window.addEventListener('load', function () {
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'));
+      const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+    });
+  </script>
 </body>
 
 </html>
