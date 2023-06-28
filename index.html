@@ -47,7 +47,7 @@
     <div class="form-group mt-4">
       <label for="gameName">输入游戏名称（英文名,中文名）：</label>
       <input type="text" id="gameName" class="form-control" placeholder="somegame,某游戏"
-        oninput="validateGameName(); updateSSTapRule();" />
+        oninput="updateSSTapRule();" />
     </div>
     <div class="form-group mt-4">
       <label for="input">粘贴路由表至此：</label>
@@ -236,6 +236,7 @@ IPv4 路由表
 
     function convertToSSTap() {
       validateGameName();
+      updateSSTapRule();
       const inputElement = document.getElementById("input");
       const outputElement = document.getElementById("output");
       const gameNameElement = document.getElementById('gameName');
