@@ -93,7 +93,7 @@
         <i class="fas fa-question-circle" data-toggle="tooltip" data-placement="top"
           title="格式如下（分行显示为方便查看）：&#10;#CSGO(规则英文名),&#10;反恐精英:全球攻势(规则中文名),&#10;0(动作类型 0.代理 1.直连),&#10;0(和上一条相同 动作类型 0.代理 1.直连),&#10;1(未知),&#10;0(未知),&#10;1(是否可读写 0.可读写 1.只可读),&#10;0(DNS代理类型 0.自动 1.直连 2.代理),&#10;By-HoldOnBro(备注)"></i>
       </label>
-      <textarea id="sstapRule" class="form-control" rows="3"></textarea>
+      <textarea id="sstapRule" class="form-control" rows="1"></textarea>
     </div>
     <div class="form-group mt-4">
       <div class="row">
@@ -113,6 +113,10 @@
       </div>
     </div>
   </div>
+
+
+  <script src="https://cdn.bootcdn.net/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
 
   <script>
     const defaultText = `以下为示例：
@@ -372,16 +376,10 @@ IPv4 路由表
       fileName += "." + downloadButton.dataset.fileExtension;
       const fileContents = outputElement.value;
       const blob = new Blob([fileContents], { type: "text/plain;charset=utf-8" });
-      const downloadUrl = URL.createObjectURL(blob);
 
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
+      saveAs(blob, fileName);
     }
+
 
 
     function toggleAutoExtract() {
