@@ -4,6 +4,7 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://lib.sinaapp.com/js/bootstrap/4.3.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     .copy-btn {
       margin-left: auto;
@@ -63,8 +64,8 @@
                 <input class="form-check-input" type="checkbox" id="autoExtractCheckbox" checked
                   onchange="toggleAutoExtract();" />
                 <label class="form-check-label ml-2" for="autoExtractCheckbox" data-toggle="tooltip"
-                  data-placement="top" title="默认选中，自动使用路由表中规则数量最多的网关IP地址">
-                  自动提取
+                  data-placement="top" title="默认选中，自动使用路由表中规则数量最多的网关 IP 地址">
+                  自动提取 <i class="fas fa-question-circle"></i>
                 </label>
               </div>
             </div>
@@ -87,9 +88,12 @@
       </div>
     </div>
     <div id="sstapRuleContainer" class="form-group mt-4 collapse">
-      <label for="sstapRule">SSTap 规则头：</label>
-      <textarea id="sstapRule" class="form-control" rows="3"
-        title="格式如下（分行显示为方便查看）：&#10;#CSGO(规则英文名),&#10;反恐精英:全球攻势(规则中文名),&#10;0(动作类型 0.代理 1.直连),&#10;0(和上一条相同 动作类型 0.代理 1.直连),&#10;1(未知),&#10;0(未知),&#10;1(是否可读写 0.可读写 1.只可读),&#10;0(DNS代理类型 0.自动 1.直连 2.代理),&#10;By-HoldOnBro(备注)"></textarea>
+      <label for="sstapRule" class="tooltip-label">
+        SSTap 规则头：
+        <i class="fas fa-question-circle" data-toggle="tooltip" data-placement="top"
+          title="格式如下（分行显示为方便查看）：&#10;#CSGO(规则英文名),&#10;反恐精英:全球攻势(规则中文名),&#10;0(动作类型 0.代理 1.直连),&#10;0(和上一条相同 动作类型 0.代理 1.直连),&#10;1(未知),&#10;0(未知),&#10;1(是否可读写 0.可读写 1.只可读),&#10;0(DNS代理类型 0.自动 1.直连 2.代理),&#10;By-HoldOnBro(备注)"></i>
+      </label>
+      <textarea id="sstapRule" class="form-control" rows="3"></textarea>
     </div>
     <div class="form-group mt-4">
       <div class="row">
