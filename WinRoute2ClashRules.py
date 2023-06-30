@@ -48,16 +48,6 @@ def get_routes(interface_ip):
 
     return filtered_routes, excluded_routes
 
-
-def convert_to_cidr(ip, netmask):
-    # 将网络掩码转换为CIDR形式
-    binary_str = ''
-    for octet in netmask.split('.'):
-        binary_str += bin(int(octet))[2:].zfill(8)
-    netmask = str(len([bit for bit in binary_str if bit == '1']))
-    return ip + '/' + netmask
-
-
 script_dir = os.path.dirname(os.path.realpath(__file__))
 config_file = os.path.join(script_dir, 'interface.ini')
 config = configparser.ConfigParser()
@@ -98,23 +88,23 @@ matching_routes, excluded_routes = get_routes(interface_ip)
 with open(output_file_txt, 'w') as f:
     for route in matching_routes:
         elements = route.split()  # 使用空格分割
-        ip_cidr = convert_to_cidr(elements[0], elements[1])
-        f.write(ip_cidr + '\n')
+        ip_cidr = ipaddress.ip_network(elements[0] + "/" + elements[1])
+        f.write(str(ip_cidr) + '\n')
 
 with open(output_file_rules, 'w') as f:
     f.write('payload:\n')
     for route in matching_routes:
         elements = route.split()  # 使用空格分割
-        ip_cidr = convert_to_cidr(elements[0], elements[1])
-        f.write('  - ' + ip_cidr + '\n')
+        ip_cidr = ipaddress.ip_network(elements[0] + "/" + elements[1])
+        f.write('  - ' + str(ip_cidr) + '\n')
 
 with open(output_file_sstap_rules, 'w') as f:
     f.write('#' + game_rule_name + ',' + game_rule_name +
             ',0,0,1,0,1,0,By-HoldOnBro\n')
     for route in matching_routes:
         elements = route.split()  # 使用空格分割
-        ip_cidr = convert_to_cidr(elements[0], elements[1])
-        f.write(ip_cidr + '\n')
+        ip_cidr = ipaddress.ip_network(elements[0] + "/" + elements[1])
+        f.write(str(ip_cidr) + '\n')
 
 print('Excluded routes:')
 for route in excluded_routes:
