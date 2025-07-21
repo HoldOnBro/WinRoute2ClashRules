@@ -26,6 +26,8 @@
       display: flex;
       justify-content: flex-end;
       margin-top: 10px;
+      flex-wrap: wrap;
+      gap: 5px;
     }
 
     .button-group button {
@@ -38,6 +40,16 @@
 
     .form-group textarea {
       resize: vertical;
+    }
+
+    @media (max-width: 768px) {
+      .button-group {
+        justify-content: center;
+      }
+      .button-group button {
+        margin: 2px;
+        font-size: 0.9rem;
+      }
     }
   </style>
 </head>
@@ -82,6 +94,7 @@
     </div>
     <div class="form-group text-center mt-4">
       <div class="button-group d-flex justify-content-center">
+        <button onclick="convertToClashNoResolve()" class="btn btn-info">转换为 Clash No-Resolve</button>
         <button onclick="convertToClash()" class="btn btn-primary">转换为 Clash 规则</button>
         <button onclick="convertToSSTap()" class="btn btn-primary">转换为 SSTap 规则</button>
         <button onclick="convertToNetch()" class="btn btn-primary">转换为 Netch 规则</button>
@@ -226,9 +239,18 @@ IPv4 路由表
 
     function validateGatewayIP() {
       const gatewayIPElement = document.getElementById('gatewayIP');
+      const autoExtractCheckbox = document.getElementById('autoExtractCheckbox');
+      
+      // 如果启用了自动提取，跳过验证
+      if (autoExtractCheckbox.checked) {
+        return;
+      }
+      
       const gatewayIP = gatewayIPElement.value.trim();
-      if (gatewayIP !== "在链路上" && !isValidIPv4(gatewayIP)) {
-        gatewayIPElement.value = "172.19.83.1/在链路上";
+      // 只在输入无效时才重置，"在链路上" 是有效输入
+      if (gatewayIP !== "" && gatewayIP !== "在链路上" && !isValidIPv4(gatewayIP)) {
+        alert("请输入有效的IP地址或'在链路上'");
+        gatewayIPElement.focus();
       }
     }
 
@@ -247,27 +269,35 @@ IPv4 路由表
     }
 
     function extractGatewayIP() {
+      const inputElement = document.getElementById('input');
+      const gatewayIPElement = document.getElementById('gatewayIP');
+      
       if (document.getElementById('autoExtractCheckbox').checked) {
-        const inputElement = document.getElementById('input');
         const gatewayIPCounts = new Map();
         const routes = inputElement.value.split("\n");
 
         for (let route of routes) {
           const elements = route.trim().split(/\s+/);
-          if (elements.length >= 3 && isValidIPv4(elements[0])) {
+          // 确保是有效的路由条目：至少3个元素，第一个是有效IP，第二个是有效掩码
+          if (elements.length >= 3 && isValidIPv4(elements[0]) && isValidIPv4(elements[1])) {
             const gatewayIP = elements[2];
-            gatewayIPCounts.set(gatewayIP, (gatewayIPCounts.get(gatewayIP) || 0) + 1);
+            // 排除无效的网关IP
+            if (gatewayIP !== "0.0.0.0" && gatewayIP !== "127.0.0.1") {
+              gatewayIPCounts.set(gatewayIP, (gatewayIPCounts.get(gatewayIP) || 0) + 1);
+            }
           }
         }
 
         if (gatewayIPCounts.size > 0) {
           const sortedGatewayIPs = Array.from(gatewayIPCounts.keys()).sort((a, b) => gatewayIPCounts.get(b) - gatewayIPCounts.get(a));
           selectedGatewayIP = sortedGatewayIPs[0];
+          gatewayIPElement.placeholder = `自动提取: ${selectedGatewayIP} (${gatewayIPCounts.get(selectedGatewayIP)} 条规则)`;
+        } else {
+          selectedGatewayIP = "";
+          gatewayIPElement.placeholder = "未找到有效网关IP";
         }
       } else {
-        const gatewayIPElement = document.getElementById('gatewayIP');
-        const gatewayIP = gatewayIPElement.value.trim();
-        selectedGatewayIP = gatewayIP;
+        selectedGatewayIP = gatewayIPElement.value.trim();
       }
     }
 
@@ -281,20 +311,75 @@ IPv4 路由表
       const downloadButton = document.getElementById("downloadButton");
       const sstapRuleContainer = document.getElementById('sstapRuleContainer');
 
+      if (!selectedGatewayIP) {
+        alert("请选择或输入有效的网关IP");
+        return;
+      }
+
       let routes = inputElement.value.split("\n");
       let results = ["payload:"];
+      let count = 0;
+      
       for (let route of routes) {
         let elements = route.trim().split(/\s+/);
-        if (elements.length >= 3 && isValidIPv4(elements[0]) && elements[2] === selectedGatewayIP) {
+        if (elements.length >= 3 && isValidIPv4(elements[0]) && isValidIPv4(elements[1]) && elements[2] === selectedGatewayIP) {
           const ipCidr = convertToCIDR(elements[0], elements[1]);
           results.push("  - " + ipCidr);
+          count++;
         }
+      }
+
+      if (count === 0) {
+        alert("未找到匹配的路由规则，请检查网关IP设置");
+        return;
       }
 
       outputElement.value = results.join("\n");
       copyButton.style.display = "block";
       downloadButton.style.display = "block";
       downloadButton.dataset.fileExtension = "rules";
+      downloadButton.dataset.fileType = "clash";
+      sstapRuleContainer.classList.remove('show');
+    }
+
+    function convertToClashNoResolve() {
+      validateGameName();
+      extractGatewayIP();
+
+      const inputElement = document.getElementById("input");
+      const outputElement = document.getElementById("output");
+      const copyButton = document.getElementById("copyButton");
+      const downloadButton = document.getElementById("downloadButton");
+      const sstapRuleContainer = document.getElementById('sstapRuleContainer');
+
+      if (!selectedGatewayIP) {
+        alert("请选择或输入有效的网关IP");
+        return;
+      }
+
+      let routes = inputElement.value.split("\n");
+      let results = ["payload:"];
+      let count = 0;
+      
+      for (let route of routes) {
+        let elements = route.trim().split(/\s+/);
+        if (elements.length >= 3 && isValidIPv4(elements[0]) && isValidIPv4(elements[1]) && elements[2] === selectedGatewayIP) {
+          const ipCidr = convertToCIDR(elements[0], elements[1]);
+          results.push("  - " + ipCidr + ",no-resolve");
+          count++;
+        }
+      }
+
+      if (count === 0) {
+        alert("未找到匹配的路由规则，请检查网关IP设置");
+        return;
+      }
+
+      outputElement.value = results.join("\n");
+      copyButton.style.display = "block";
+      downloadButton.style.display = "block";
+      downloadButton.dataset.fileExtension = "rules";
+      downloadButton.dataset.fileType = "clash-no-resolve";
       sstapRuleContainer.classList.remove('show');
     }
 
@@ -311,26 +396,42 @@ IPv4 路由表
       const copyButton = document.getElementById("copyButton");
       const downloadButton = document.getElementById("downloadButton");
 
+      if (!selectedGatewayIP) {
+        alert("请选择或输入有效的网关IP");
+        return;
+      }
+
       let routes = inputElement.value.split("\n");
       let results = [];
+      let count = 0;
+      
       for (let route of routes) {
         let elements = route.trim().split(/\s+/);
-        if (elements.length >= 3 && isValidIPv4(elements[0]) && elements[2] === selectedGatewayIP) {
+        if (elements.length >= 3 && isValidIPv4(elements[0]) && isValidIPv4(elements[1]) && elements[2] === selectedGatewayIP) {
           const ipCidr = convertToCIDR(elements[0], elements[1]);
           results.push(ipCidr);
+          count++;
         }
       }
 
+      if (count === 0) {
+        alert("未找到匹配的路由规则，请检查网关IP设置");
+        return;
+      }
+
       const gameNames = gameNameElement.value.split(',');
-      if (isValidSSTapRule(sstapRule.value)) {
-        sstapRuleElement.value = sstapRule.value;
+      // 修复：使用正确的变量名
+      if (isValidSSTapRule(sstapRuleElement.value)) {
+        // 规则头已经有效，直接使用
       } else {
         sstapRuleElement.value = "#" + gameNames[0].trim() + "," + gameNames[1].trim() + ",0,0,1,0,1,0,By-HoldOnBro";
       }
+      
       outputElement.value = sstapRuleElement.value + "\n" + results.join("\n");
       copyButton.style.display = "block";
       downloadButton.style.display = "block";
       downloadButton.dataset.fileExtension = "rules";
+      downloadButton.dataset.fileType = "sstap";
       sstapRuleContainer.classList.add('show');
     }
 
@@ -344,27 +445,55 @@ IPv4 路由表
       const downloadButton = document.getElementById("downloadButton");
       const sstapRuleContainer = document.getElementById('sstapRuleContainer');
 
+      if (!selectedGatewayIP) {
+        alert("请选择或输入有效的网关IP");
+        return;
+      }
+
       let routes = inputElement.value.split("\n");
       let results = [];
+      let count = 0;
+      
       for (let route of routes) {
         let elements = route.trim().split(/\s+/);
-        if (elements.length >= 3 && isValidIPv4(elements[0]) && elements[2] === selectedGatewayIP) {
+        if (elements.length >= 3 && isValidIPv4(elements[0]) && isValidIPv4(elements[1]) && elements[2] === selectedGatewayIP) {
           const ipCidr = convertToCIDR(elements[0], elements[1]);
           results.push(ipCidr);
+          count++;
         }
+      }
+
+      if (count === 0) {
+        alert("未找到匹配的路由规则，请检查网关IP设置");
+        return;
       }
 
       outputElement.value = results.join("\n");
       copyButton.style.display = "block";
       downloadButton.style.display = "block";
       downloadButton.dataset.fileExtension = "txt";
+      downloadButton.dataset.fileType = "netch";
       sstapRuleContainer.classList.remove('show');
     }
 
     function copyToClipboard() {
       const outputElement = document.getElementById("output");
       outputElement.select();
-      document.execCommand("copy");
+      outputElement.setSelectionRange(0, 99999); // 兼容移动设备
+      try {
+        document.execCommand("copy");
+        // 可选：显示复制成功的反馈
+        const copyButton = document.getElementById("copyButton");
+        const originalText = copyButton.textContent;
+        copyButton.textContent = "已复制!";
+        copyButton.style.background = "#28a745";
+        setTimeout(() => {
+          copyButton.textContent = originalText;
+          copyButton.style.background = "";
+        }, 1500);
+      } catch (err) {
+        alert("复制失败，请手动选择复制");
+      }
     }
 
     function showDownloadDialog() {
@@ -373,6 +502,13 @@ IPv4 路由表
       const gameNameElement = document.getElementById('gameName');
       const gameNames = gameNameElement.value.split(',');
       let fileName = (gameNames.length === 2 && gameNames[0].trim() !== "" && gameNames[1].trim() !== "") ? gameNames[0].trim() : "somegame";
+      
+      // 根据不同类型添加后缀
+      const fileType = downloadButton.dataset.fileType || "";
+      if (fileType === "clash-no-resolve") {
+        fileName += "_no-resolve";
+      }
+      
       fileName += "." + downloadButton.dataset.fileExtension;
       const fileContents = outputElement.value;
       const blob = new Blob([fileContents], { type: "text/plain;charset=utf-8" });
@@ -380,18 +516,18 @@ IPv4 路由表
       saveAs(blob, fileName);
     }
 
-
-
     function toggleAutoExtract() {
       const autoExtractCheckbox = document.getElementById('autoExtractCheckbox');
       const gatewayIPElement = document.getElementById('gatewayIP');
-      const gatewayIP = gatewayIPElement.value.trim();
+      
       if (autoExtractCheckbox.checked) {
         gatewayIPElement.disabled = true;
         gatewayIPElement.value = "";
+        gatewayIPElement.placeholder = "将自动提取最常用的网关IP";
       } else {
         gatewayIPElement.disabled = false;
-        gatewayIPElement.value = selectedGatewayIP;
+        gatewayIPElement.value = selectedGatewayIP || "";
+        gatewayIPElement.placeholder = "172.19.83.1/在链路上";
       }
     }
   </script>
